@@ -3,8 +3,10 @@ package main
 import (
 	"fmt"
 	"log"
+	"regexp"
 	"strconv"
 	"strings"
+	"sync"
 	"time"
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
@@ -13,6 +15,8 @@ import (
 // TODO: Append Wenday Statistic by Scauts and Send For Chanel
 
 var (
+	scautsMutex sync.RWMutex
+	statMutex   sync.RWMutex
 	StatScauts  = make(map[int64]WendayScaut)
 	Scauts      = make(map[int64]Scaut)
 	MsgForAdmin = tgbotapi.NewMessage(-1002464733218, "")
@@ -71,8 +75,9 @@ func main() {
 				b.bot.Send(msg)
 				continue
 			case "info":
+				scautsMutex.Lock()
 				user := Scauts[upd.Message.From.ID]
-
+				scautsMutex.Unlock()
 				msg.Text = fmt.Sprintf("Смену завершил %s.c %s-%s (%s)\n🔁Перемещения: %d \n✅Навёл порядок: %d \nИтого: %d",
 					getDate(), getTimeReport(user.FirstTime), getTimeReport(user.TimeStart.Add(-b.cfg.TimeOfset)),
 					user.TimeStart.Add(-b.cfg.TimeOfset).Sub(user.FirstTime).String(),
@@ -85,6 +90,7 @@ func main() {
 				continue
 			case "rgl":
 				if Admins[upd.Message.From.ID] {
+					scautsMutex.Lock()
 					for _, value := range Scauts {
 						start := value.TimeStart.Add(-b.cfg.TimeOfset)
 						lastReport := getTimeReport(start)
@@ -93,6 +99,7 @@ func main() {
 							value.UserName, value.Moved, value.Images, value.Lateness, firstReport, lastReport,
 						)
 					}
+					scautsMutex.Unlock()
 					b.bot.Send(msg)
 					continue
 				}
@@ -104,12 +111,14 @@ func main() {
 				continue
 			case "restats":
 				if Admins[upd.Message.From.ID] {
+					statMutex.Lock()
 					for key, _ := range StatScauts {
 						_, ok := StatScauts[key]
 						if ok {
 							StatScauts[key] = WendayScaut{}
 						}
 					}
+					statMutex.Unlock()
 					msg.Text = "Статистика удалена!"
 					b.bot.Send(msg)
 					continue
@@ -125,6 +134,8 @@ func main() {
 
 func (b *B) ReportScaut(Message tgbotapi.Message) {
 	date := getDate()
+	scautsMutex.Lock()
+	defer scautsMutex.Unlock()
 	scaut := Scauts[Message.From.ID]
 	start := scaut.TimeStart.Add(-b.cfg.TimeOfset)
 	lastReport := getTimeReport(start)
@@ -149,6 +160,8 @@ func (b *B) ReportScaut(Message tgbotapi.Message) {
 }
 
 func (b *B) MessageHandler(msg tgbotapi.Message) {
+	scautsMutex.Lock()
+	defer scautsMutex.Unlock()
 	scaut := Scauts[msg.From.ID]
 	if scaut.FirstTime.IsZero() {
 		scaut.FirstTime = msg.Time()
@@ -172,6 +185,7 @@ func (b *B) MessageHandler(msg tgbotapi.Message) {
 func (b *B) ResetReportRGL(timeReset time.Duration) {
 	for {
 		time.Sleep(2 * time.Hour)
+		scautsMutex.Lock()
 		for key, scaut := range Scauts {
 			if !scaut.TimeStart.IsZero() {
 				lastReport := scaut.TimeStart.Add(-b.cfg.TimeOfset + b.cfg.TimeReset)
@@ -187,11 +201,14 @@ func (b *B) ResetReportRGL(timeReset time.Duration) {
 				}
 			}
 		}
+		scautsMutex.Unlock()
 
 	}
 }
 
 func (b *B) getStats(msg tgbotapi.Message) {
+	statMutex.Lock()
+	defer statMutex.Unlock()
 	message := tgbotapi.NewMessage(msg.Chat.ID, "Общая Статистика!\n\n")
 	for _, value := range StatScauts {
 		message.Text += fmt.Sprintf("@%s\nПеремещений: %d\nОпозданий: %d\nВсего (%d)\n\n", value.UserName, value.SummerMuved, value.SummerLateness, value.SummerHour)
@@ -200,6 +217,8 @@ func (b *B) getStats(msg tgbotapi.Message) {
 }
 
 func (b *B) AddStat(scaut Scaut, id int64) {
+	statMutex.Lock()
+	defer statMutex.Unlock()
 	sumHour := int(scaut.TimeStart.Add(-b.cfg.TimeOfset).Sub(scaut.FirstTime).Hours())
 	wenday := StatScauts[id]
 	wenday.UserName = scaut.UserName
@@ -210,15 +229,12 @@ func (b *B) AddStat(scaut Scaut, id int64) {
 }
 
 func SerchMoved(msg string) int {
-	arrText := strings.Split(msg, "\n")
-	if len(arrText) < 2 {
+	re := regexp.MustCompile(`(?i)(Перемещения|Итого)[:\-\s]*(\d+)`)
+	matches := re.FindStringSubmatch(msg)
+	if len(matches) < 3 {
 		return 0
 	}
-	NewArr := strings.Split(arrText[len(arrText)-1], " ")
-	result, err := strconv.Atoi(NewArr[1])
-	if err != nil {
-		return 0
-	}
+	result, _ := strconv.Atoi(matches[2])
 	return result
 }
 
