@@ -10,28 +10,17 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
-type Config struct {
-	Token     string
-	TimeOfset time.Duration
-	TimeReset time.Duration
-}
+// TODO: Append Wenday Statistic by Scauts and Send For Chanel
 
-type B struct {
-	cfg *Config
-	bot *tgbotapi.BotAPI
-}
-
-type Scaut struct {
-	Moved     int
-	Images    int
-	UserName  string
-	Lateness  int
-	TimeStart time.Time
-	FirstTime time.Time
-}
-
-var Scauts = make(map[int64]Scaut)
-var MsgForAdmin = tgbotapi.NewMessage(-1002464733218, "")
+var (
+	StatScauts  = make(map[int64]WendayScaut)
+	Scauts      = make(map[int64]Scaut)
+	MsgForAdmin = tgbotapi.NewMessage(-1002464733218, "")
+	Admins      = map[int64]bool{
+		1716790730: true,
+		827983472:  true,
+	}
+)
 
 func initConfig() *Config {
 	return &Config{
@@ -73,6 +62,11 @@ func main() {
 
 			switch upd.Message.Command() {
 			case "start":
+				if Admins[upd.Message.From.ID] {
+					msg.Text = "/info - Ифнормация по перемещениям и фото !\n /report - Сгенерировать отчёт\n/rgl - Общая информация по скаутам \n/stats - Обшая статиска с последнего сброса\n /restats - Сброс общей статиски"
+					b.bot.Send(msg)
+					continue
+				}
 				msg.Text = "/info - Ифнормация по перемещениям и фото !\n /report - Сгенерировать отчёт"
 				b.bot.Send(msg)
 				continue
@@ -90,15 +84,36 @@ func main() {
 				go b.ReportScaut(*upd.Message)
 				continue
 			case "rgl":
-				for _, value := range Scauts {
-					start := value.TimeStart.Add(-b.cfg.TimeOfset)
-					lastReport := getTimeReport(start)
-					firstReport := getTimeReport(value.FirstTime)
-					msg.Text = fmt.Sprintf("@%s: \nПереместил: %d\nНавёл порядок: %d\nОтчёты более 30 минут: %d\nПервый отчёт: %s\nПолследний отёт: %s\n\n",
-						value.UserName, value.Moved, value.Images, value.Lateness, firstReport, lastReport,
-					)
+				if Admins[upd.Message.From.ID] {
+					for _, value := range Scauts {
+						start := value.TimeStart.Add(-b.cfg.TimeOfset)
+						lastReport := getTimeReport(start)
+						firstReport := getTimeReport(value.FirstTime)
+						msg.Text = fmt.Sprintf("@%s: \nПереместил: %d\nНавёл порядок: %d\nОтчёты более 30 минут: %d\nПервый отчёт: %s\nПолследний отёт: %s\n\n",
+							value.UserName, value.Moved, value.Images, value.Lateness, firstReport, lastReport,
+						)
+					}
+					b.bot.Send(msg)
+					continue
 				}
-				b.bot.Send(msg)
+				continue
+			case "stats":
+				if Admins[upd.Message.From.ID] {
+					go b.getStats(*upd.Message)
+				}
+				continue
+			case "restats":
+				if Admins[upd.Message.From.ID] {
+					for key, _ := range StatScauts {
+						_, ok := StatScauts[key]
+						if ok {
+							StatScauts[key] = WendayScaut{}
+						}
+					}
+					msg.Text = "Статистика удалена!"
+					b.bot.Send(msg)
+					continue
+				}
 				continue
 			default:
 				continue
@@ -125,9 +140,10 @@ func (b *B) ReportScaut(Message tgbotapi.Message) {
 	// SCAUT Message
 	sumHour := strings.Split(start.Sub(scaut.FirstTime).String(), "h")
 	msg := tgbotapi.NewMessage(Message.Chat.ID, "")
-	msg.Text = fmt.Sprintf("Смену завершил %s.c %d:%d-%s (%s Часов)\n🔁Перемещения: %d \n✅Навёл порядок: %d \nИтого: %d", date,
-		scaut.FirstTime.Hour(), scaut.FirstTime.Minute(), lastReport, sumHour[0], scaut.Moved, scaut.Images, scaut.Moved+scaut.Images,
+	msg.Text = fmt.Sprintf("Смену завершил %s.c %s-%s (%s Часов)\n🔁Перемещения: %d \n✅Навёл порядок: %d \nИтого: %d", date,
+		getTimeReport(scaut.FirstTime), lastReport, sumHour[0], scaut.Moved, scaut.Images, scaut.Moved+scaut.Images,
 	)
+	go b.AddStat(scaut, Message.From.ID)
 	Scauts[Message.From.ID] = Scaut{}
 	b.bot.Send(msg)
 }
@@ -165,6 +181,7 @@ func (b *B) ResetReportRGL(timeReset time.Duration) {
 					MsgForAdmin.Text = fmt.Sprintf("Смена завершенна Ботом!\n@%s:\nСмену завершил: %s.c%s-%s (%s)\nПереместил: %d\nНавёл порядок: %d\nОтчёты более 30 минут: %d\n\n",
 						scaut.UserName, date, getTimeReport(scaut.FirstTime), getTimeReport(scaut.TimeStart.Add(-b.cfg.TimeOfset)), start.Sub(scaut.FirstTime).String(), scaut.Moved, scaut.Images, scaut.Lateness,
 					)
+					b.AddStat(scaut, key)
 					Scauts[key] = Scaut{}
 					b.bot.Send(MsgForAdmin)
 				}
@@ -174,10 +191,30 @@ func (b *B) ResetReportRGL(timeReset time.Duration) {
 	}
 }
 
+func (b *B) getStats(msg tgbotapi.Message) {
+	message := tgbotapi.NewMessage(msg.Chat.ID, "Общая Статистика!\n\n")
+	for _, value := range StatScauts {
+		message.Text += fmt.Sprintf("@%s\nПеремещений: %d\nОпозданий: %d\nВсего (%d)\n\n", value.UserName, value.SummerMuved, value.SummerLateness, value.SummerHour)
+	}
+	b.bot.Send(message)
+}
+
+func (b *B) AddStat(scaut Scaut, id int64) {
+	sumHour := int(scaut.TimeStart.Add(-b.cfg.TimeOfset).Sub(scaut.FirstTime).Hours())
+	wenday := StatScauts[id]
+	wenday.UserName = scaut.UserName
+	wenday.SummerMuved += scaut.Moved
+	wenday.SummerLateness += scaut.Lateness
+	wenday.SummerHour += sumHour
+	StatScauts[id] = wenday
+}
+
 func SerchMoved(msg string) int {
 	arrText := strings.Split(msg, "\n")
+	if len(arrText) < 2 {
+		return 0
+	}
 	NewArr := strings.Split(arrText[len(arrText)-1], " ")
-
 	result, err := strconv.Atoi(NewArr[1])
 	if err != nil {
 		return 0
@@ -199,6 +236,7 @@ func getDate() string {
 }
 
 func getTimeReport(start time.Time) string {
+	start = start.Add(1 * time.Hour)
 	if start.Hour() < 10 && start.Minute() < 10 {
 		return fmt.Sprintf("0%d:0%d", start.Hour(), start.Minute())
 
