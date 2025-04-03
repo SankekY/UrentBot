@@ -77,10 +77,9 @@ func (b *Bot) ResetReportRGL(timeReset time.Duration) {
 		b.muScauts.Lock()
 		for key, scaut := range Scauts {
 			if !scaut.TimeStart.IsZero() {
-				lastReport := scaut.TimeStart.Add(b.cfg.TimeReset)
-				if lastReport.Sub(time.Now()) < 0 {
+				if time.Until(scaut.TimeStart.Add(b.cfg.TimeReset)) < 0 {
 					MsgForAdmin := tgbotapi.NewMessage(b.cfg.AdminChannel, "")
-					MsgForAdmin.Text = fmt.Sprintf("Смена завершенна Ботом!\n@%s:\nСмену завершил: %s.c%s-%s (%s)\nПереместил: %d\nНавёл порядок: %d\nОтчёты более 30 минут: %d\n\n", scaut.UserName, getDate(),
+					MsgForAdmin.Text = fmt.Sprintf("Смена завершенна Ботом!\n@%s:\nСмену завершил: %s.c%s-%s (%s)\n🔁 Переместил: %d\nn✅ Навёл порядок: %d\nОтчёты более 30 минут: %d\n\n", scaut.UserName, getDate(),
 
 						b.getTimeReport(scaut.FirstTime), b.getTimeReport(scaut.TimeStart), scaut.TimeStart.Sub(scaut.FirstTime).String(),
 						scaut.Moved, scaut.Images, scaut.Lateness,
@@ -90,7 +89,7 @@ func (b *Bot) ResetReportRGL(timeReset time.Duration) {
 					if Subs[scaut.UserName] != 0 {
 						msgScaut := tgbotapi.NewMessage(Subs[scaut.UserName], "")
 						sumHour := strings.Split(scaut.TimeStart.Sub(scaut.FirstTime).String(), "h")
-						msgScaut.Text = fmt.Sprintf("Смену завершил %s.c %s-%s (%s Часов)\n🔁Перемещения: %d \n✅Навёл порядок: %d \nИтого: %d", getDate(),
+						msgScaut.Text = fmt.Sprintf("Смену завершил %s.c %s-%s (%s Часов)\n🔁 Перемещения: %d \n✅ Навёл порядок: %d \nИтого: %d", getDate(),
 							b.getTimeReport(scaut.FirstTime), b.getTimeReport(scaut.TimeStart), sumHour[0],
 							scaut.Moved, scaut.Images, scaut.Lateness,
 						)
