@@ -1,6 +1,8 @@
 <h1>Urent Bot for Scaut</h1>
-<h3>
+<q>
   Simple project - No DataBase, No Services, "Clean Code" 
-  command - [ /start, /report, /info, /rgl, /stats, /restats, /sub ]
-  Description command -
-</h3>
+</q>
+<q>
+command - [ /start, /report, /info, /rgl, /stats, /restats, /sub ]
+Description command -
+</q>
