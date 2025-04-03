@@ -19,7 +19,7 @@ var (
 	statMutex   sync.RWMutex
 	StatScauts  = make(map[int64]WendayScaut)
 	Scauts      = make(map[int64]Scaut)
-	MsgForAdmin = tgbotapi.NewMessage(-1002464733218, "")
+	AdminChatId = int64(-1002464733218)
 	Admins      = map[int64]bool{
 		1716790730: true,
 		827983472:  true,
@@ -53,7 +53,7 @@ func main() {
 
 	updates := b.bot.GetUpdatesChan(tgbotapi.NewUpdate(0))
 	for upd := range updates {
-		if upd.Message.Text == "" && upd.Message.Photo == nil {
+		if upd.Message == nil {
 			continue
 		}
 		msg := tgbotapi.NewMessage(upd.Message.Chat.ID, "")
@@ -95,7 +95,7 @@ func main() {
 						start := value.TimeStart.Add(-b.cfg.TimeOfset)
 						lastReport := getTimeReport(start)
 						firstReport := getTimeReport(value.FirstTime)
-						msg.Text = fmt.Sprintf("@%s: \nПереместил: %d\nНавёл порядок: %d\nОтчёты более 30 минут: %d\nПервый отчёт: %s\nПолследний отёт: %s\n\n",
+						msg.Text += fmt.Sprintf("@%s: \nПереместил: %d\nНавёл порядок: %d\nОтчёты более 30 минут: %d\nПервый отчёт: %s\nПолследний отёт: %s\n\n",
 							value.UserName, value.Moved, value.Images, value.Lateness, firstReport, lastReport,
 						)
 					}
@@ -142,6 +142,7 @@ func (b *B) ReportScaut(Message tgbotapi.Message) {
 
 	// RGL Messsage
 	if scaut.UserName != "" {
+		MsgForAdmin := tgbotapi.NewMessage(AdminChatId, "")
 		MsgForAdmin.Text = fmt.Sprintf("@%s:\nСмену завершил: %s.c%s-%s (%s)\nПереместил: %d\nНавёл порядок: %d\nОтчёты более 30 минут: %d\n\n",
 			scaut.UserName, date, getTimeReport(scaut.FirstTime), lastReport, start.Sub(scaut.FirstTime).String(), scaut.Moved, scaut.Images, scaut.Lateness,
 		)
@@ -186,6 +187,7 @@ func (b *B) ResetReportRGL(timeReset time.Duration) {
 	for {
 		time.Sleep(2 * time.Hour)
 		scautsMutex.Lock()
+		MsgForAdmin := tgbotapi.NewMessage(AdminChatId, "")
 		for key, scaut := range Scauts {
 			if !scaut.TimeStart.IsZero() {
 				lastReport := scaut.TimeStart.Add(-b.cfg.TimeOfset + b.cfg.TimeReset)
