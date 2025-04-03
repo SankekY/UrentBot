@@ -1,9 +1,7 @@
-package main
+package bot
 
 import (
 	"time"
-
-	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
 type WendayScaut struct {
@@ -13,17 +11,6 @@ type WendayScaut struct {
 	SummerMuved    int    // Количество перемещений
 }
 
-type Config struct {
-	Token     string
-	TimeOfset time.Duration
-	TimeReset time.Duration
-}
-
-type B struct {
-	cfg *Config
-	bot *tgbotapi.BotAPI
-}
-
 type Scaut struct {
 	Moved     int
 	Images    int
@@ -31,4 +18,5 @@ type Scaut struct {
 	Lateness  int
 	TimeStart time.Time
 	FirstTime time.Time
+	ChatID    int64
 }
