@@ -42,11 +42,12 @@ func NewBot(cfg config.Config) *Bot {
 }
 
 var (
-	StatScauts   = make(map[int64]WendayScaut)
-	Scauts       = make(map[int64]Scaut)
-	Subs         = make(map[string]int64)
-	Dublers      = make(map[string]int)
-	reportDubler int
+	StatScauts        = make(map[int64]WendayScaut)
+	Scauts            = make(map[int64]Scaut)
+	Subs              = make(map[string]int64)
+	Dublers           = make(map[string]int)
+	reportDubler      int
+	IdealUnitsPerHour = float64(15.5)
 )
 
 func (b *Bot) Start() {
@@ -204,3 +205,12 @@ func (b *Bot) getTimeReport(start time.Time) string {
 	hour, min := future.Hour(), future.Minute()
 	return fmt.Sprintf("%02d:%02d", hour, min)
 }
+
+func efficiencyPercent(hours, moves float64) float64 {
+	actualUnitsPerHour := float64(moves) / float64(hours)
+	return (actualUnitsPerHour / IdealUnitsPerHour) * 100
+}
+
+// Пример (идеал = 25 операций/час):
+// kpd := efficiencyPercent(6, 275, 25, 23, 78)
+// fmt.Printf("КПД: %.1f%%\n", kpd) // (101/6)/25 * 100 ≈ 67.3%

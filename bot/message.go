@@ -26,14 +26,16 @@ func (b *Bot) GenerateReportScaut(scaut Scaut) string {
 func (b *Bot) GenerateReportRGL(scaut Scaut) string {
 	var result strings.Builder
 	if scaut.UserName != "" {
+		kpd := efficiencyPercent(float64(scaut.TimeStart.Sub(scaut.FirstTime).Hours()), float64(scaut.Moved))
 		result.WriteString(fmt.Sprintf(
 			"Смену завершил %s.c %s-%s (%s Часов)\n"+
-				"🔁Перемещения: %d\n"+
-				"✅Навёл порядок: %d\n"+
-				"⏱ Отчёты более 30 минут: %d\n",
+				"🔁 Перемещения: %d\n"+
+				"✅ Навёл порядок: %d\n"+
+				"⏱ Отчёты более 30 минут: %d\n"+
+				"🚀 Эффективность: %.1f%%\n\n",
 			getDate(), b.getTimeReport(scaut.FirstTime),
 			b.getTimeReport(scaut.TimeStart), scaut.TimeStart.Sub(scaut.FirstTime).String(),
-			scaut.Moved, scaut.Images, scaut.Lateness,
+			scaut.Moved, scaut.Images, scaut.Lateness, kpd,
 		))
 	}
 	return result.String()
@@ -45,18 +47,21 @@ func (b *Bot) RGLStats(scouts map[int64]Scaut) string {
 
 	for _, scout := range scouts {
 		if !scout.FirstTime.IsZero() {
+			kpd := efficiencyPercent(float64(scout.TimeStart.Sub(scout.FirstTime).Hours()), float64(scout.Moved))
 			result.WriteString(fmt.Sprintf(
 				"👤 *@%s*\n"+
 					"➖ Перемещений: %d\n"+
 					"➖ Уборок: %d\n"+
 					"➖ Опозданий: %d\n"+
-					"⏳ Время работы: %s - %s\n\n",
+					"⏳ Время работы: %s - %s\n"+
+					"🚀 Эффективность: %.1f%%\n\n",
 				scout.UserName,
 				scout.Moved,
 				scout.Images,
 				scout.Lateness,
 				b.getTimeReport(scout.FirstTime),
 				b.getTimeReport(scout.TimeStart),
+				kpd,
 			))
 		}
 	}
@@ -71,15 +76,18 @@ func GenerateStats(Stats map[int64]WendayScaut) string {
 
 	for _, scout := range Stats {
 		if scout.UserName != "" {
+			kpd := efficiencyPercent(float64(scout.SummerHour), float64(scout.SummerMuved))
 			result.WriteString(fmt.Sprintf(
 				"👤 *@%s*\n"+
 					"➖ Перемещений: %d\n"+
 					"➖ Опозданий: %d\n"+
-					"⏳ Время работы: (%d Чаосв)\n\n",
+					"⏳ Время работы: (%d Чаосв)\n"+
+					"🚀 Эффективность: %.1f%%\n\n",
 				scout.UserName,
 				scout.SummerMuved,
 				scout.SummerLateness,
 				scout.SummerHour,
+				kpd,
 			))
 		}
 	}
