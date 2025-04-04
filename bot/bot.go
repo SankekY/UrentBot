@@ -5,7 +5,6 @@ import (
 	"log"
 	"regexp"
 	"strconv"
-	"strings"
 	"sync"
 	"time"
 	"urentBot/config"
@@ -67,6 +66,7 @@ func (b *Bot) Start() {
 			b.CMDHanlder(*upd.Message)
 			continue
 		}
+
 		b.MessageHandler(*upd.Message)
 	}
 }
@@ -79,20 +79,13 @@ func (b *Bot) ResetReportRGL(timeReset time.Duration) {
 			if !scaut.TimeStart.IsZero() {
 				if time.Until(scaut.TimeStart.Add(b.cfg.TimeReset)) < 0 {
 					MsgForAdmin := tgbotapi.NewMessage(b.cfg.AdminChannel, "")
-					MsgForAdmin.Text = fmt.Sprintf("Смена завершенна Ботом!\n@%s:\nСмену завершил: %s.c%s-%s (%s)\n🔁 Переместил: %d\nn✅ Навёл порядок: %d\nОтчёты более 30 минут: %d\n\n", scaut.UserName, getDate(),
+					MsgForAdmin.Text = b.GenerateReportRGL(scaut)
 
-						b.getTimeReport(scaut.FirstTime), b.getTimeReport(scaut.TimeStart), scaut.TimeStart.Sub(scaut.FirstTime).String(),
-						scaut.Moved, scaut.Images, scaut.Lateness,
-					)
 					b.AddStat(scaut, key)
 
 					if Subs[scaut.UserName] != 0 {
 						msgScaut := tgbotapi.NewMessage(Subs[scaut.UserName], "")
-						sumHour := strings.Split(scaut.TimeStart.Sub(scaut.FirstTime).String(), "h")
-						msgScaut.Text = fmt.Sprintf("Смену завершил %s.c %s-%s (%s Часов)\n🔁 Перемещения: %d \n✅ Навёл порядок: %d \nИтого: %d", getDate(),
-							b.getTimeReport(scaut.FirstTime), b.getTimeReport(scaut.TimeStart), sumHour[0],
-							scaut.Moved, scaut.Images, scaut.Lateness,
-						)
+						msgScaut.Text = b.GenerateReportScaut(scaut)
 						b.bot.Send(msgScaut)
 					}
 					Scauts[key] = Scaut{}
