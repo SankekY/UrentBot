@@ -3,6 +3,7 @@ package bot
 import (
 	"fmt"
 	"log"
+
 	"regexp"
 	"strconv"
 	"sync"
@@ -11,8 +12,6 @@ import (
 
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
-
-// TODO: Append Wenday Statistic by Scauts and Send For Chanel
 
 type Bot struct {
 	cfg *config.Config
@@ -43,9 +42,11 @@ func NewBot(cfg config.Config) *Bot {
 }
 
 var (
-	StatScauts = make(map[int64]WendayScaut)
-	Scauts     = make(map[int64]Scaut)
-	Subs       = make(map[string]int64)
+	StatScauts   = make(map[int64]WendayScaut)
+	Scauts       = make(map[int64]Scaut)
+	Subs         = make(map[string]int64)
+	Dublers      = make(map[string]int)
+	reportDubler int
 )
 
 func (b *Bot) Start() {
@@ -68,6 +69,9 @@ func (b *Bot) Start() {
 		}
 
 		b.MessageHandler(*upd.Message)
+		if upd.Message.Text != "" && upd.Message.Photo == nil {
+			b.DublersHandler(*upd.Message)
+		}
 	}
 }
 
@@ -98,6 +102,45 @@ func (b *Bot) ResetReportRGL(timeReset time.Duration) {
 	}
 }
 
+func (b *Bot) DublersHandler(msg tgbotapi.Message) {
+	reportDubler++
+	AddToDublers(msg.Text)
+	if reportDubler >= 3 {
+		if ResultDubler := findDublicates(Dublers); ResultDubler != nil {
+			message := tgbotapi.NewMessage(b.cfg.AdminChannel, "⛔ Дубликаты найдены ⛔\n")
+			for key, value := range ResultDubler {
+				message.Text += fmt.Sprintf(" - %s: %d Раз(а)\n", key, value-1)
+			}
+			message.Text += "@" + msg.From.UserName
+			b.bot.Send(message)
+		}
+		reportDubler = 0
+		Dublers = make(map[string]int)
+		AddToDublers(msg.Text)
+
+	}
+
+}
+func AddToDublers(msg string) {
+	re, _ := regexp.Compile(`S\.\d{6}`)
+	numbers := re.FindAllString(msg, -1)
+	if numbers != nil && reportDubler < 3 {
+		for _, n := range numbers {
+			Dublers[n] += 1
+		}
+	}
+}
+
+func findDublicates(dublers map[string]int) map[string]int {
+	dubler := make(map[string]int)
+	for key, value := range dublers {
+		if value > 1 {
+			dubler[key] += value
+		}
+	}
+	return dubler
+}
+
 // // OKEY
 func (b *Bot) MessageHandler(msg tgbotapi.Message) {
 	b.muScauts.Lock()
@@ -125,6 +168,16 @@ func (b *Bot) MessageHandler(msg tgbotapi.Message) {
 	Scauts[msg.From.ID] = scaut
 }
 
+func SerchMoved(msg string) int {
+	re := regexp.MustCompile(`(?i)(Перемещения|Итого)[:\-\s]*(\d+)`)
+	matches := re.FindStringSubmatch(msg)
+	if len(matches) < 3 {
+		return 0
+	}
+	result, _ := strconv.Atoi(matches[2])
+	return result
+}
+
 func (b *Bot) AddStat(scaut Scaut, id int64) {
 	b.muStats.Lock()
 	defer b.muStats.Unlock()
@@ -140,15 +193,6 @@ func (b *Bot) AddStat(scaut Scaut, id int64) {
 }
 
 // Helper Func
-func SerchMoved(msg string) int {
-	re := regexp.MustCompile(`(?i)(Перемещения|Итого)[:\-\s]*(\d+)`)
-	matches := re.FindStringSubmatch(msg)
-	if len(matches) < 3 {
-		return 0
-	}
-	result, _ := strconv.Atoi(matches[2])
-	return result
-}
 
 func getDate() string {
 	now := time.Now()
