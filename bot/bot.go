@@ -51,6 +51,7 @@ var (
 )
 
 func (b *Bot) Start() {
+	log.Printf("Bot started: %s!", b.bot.Self.FirstName)
 
 	go b.ResetReportRGL(b.cfg.TimeReset)
 	updates := b.bot.GetUpdatesChan(tgbotapi.NewUpdate(0))
