@@ -143,7 +143,6 @@ func findDublicates(dublers map[string]int) map[string]int {
 	return dubler
 }
 
-// // OKEY
 func (b *Bot) MessageHandler(msg tgbotapi.Message) {
 	b.muScauts.Lock()
 	defer b.muScauts.Unlock()
@@ -194,8 +193,6 @@ func (b *Bot) AddStat(scaut Scaut, id int64) {
 
 }
 
-// Helper Func
-
 func getDate() string {
 	now := time.Now()
 	return fmt.Sprintf("%02d.%02d", now.Day(), now.Month())
@@ -211,7 +208,3 @@ func efficiencyPercent(hours, moves float64) float64 {
 	actualUnitsPerHour := float64(moves) / float64(hours)
 	return (actualUnitsPerHour / IdealUnitsPerHour) * 100
 }
-
-// Пример (идеал = 25 операций/час):
-// kpd := efficiencyPercent(6, 275, 25, 23, 78)
-// fmt.Printf("КПД: %.1f%%\n", kpd) // (101/6)/25 * 100 ≈ 67.3%
