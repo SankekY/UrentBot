@@ -129,7 +129,6 @@ func (b *Bot) CMDReport(msg tgbotapi.Message) {
 	}
 
 	// SCAUT Message
-
 	message := tgbotapi.NewMessage(msg.Chat.ID, "")
 	message.Text = b.GenerateReportScaut(scaut)
 	b.bot.Send(message)

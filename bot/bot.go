@@ -109,12 +109,15 @@ func (b *Bot) DublersHandler(msg tgbotapi.Message) {
 	AddToDublers(msg.Text)
 	if reportDubler >= 3 {
 		if ResultDubler := findDublicates(Dublers); ResultDubler != nil {
-			message := tgbotapi.NewMessage(b.cfg.AdminChannel, "⛔ Дубликаты найдены ⛔\n")
+			message := tgbotapi.NewMessage(b.cfg.AdminChannel, "")
 			for key, value := range ResultDubler {
 				message.Text += fmt.Sprintf(" - %s: %d Раз(а)\n", key, value-1)
 			}
-			message.Text += "@" + msg.From.UserName
-			b.bot.Send(message)
+			if message.Text != "" {
+				message.Text = "⛔ Дубликаты найдены ⛔\n" + message.Text
+				message.Text += "@" + msg.From.UserName
+				b.bot.Send(message)
+			}
 		}
 		reportDubler = 0
 		Dublers = make(map[string]int)
