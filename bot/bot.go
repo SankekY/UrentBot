@@ -60,7 +60,7 @@ func (b *Bot) Start() {
 			continue
 		}
 		if upd.Message.IsCommand() {
-			if upd.Message.Chat.Type != "private" {
+			if upd.Message.Chat.Type != "private" && upd.Message.Chat.ID != b.cfg.AdminChannel {
 				msg := tgbotapi.NewMessage(upd.Message.Chat.ID, "")
 				del := tgbotapi.NewDeleteMessage(msg.ChatID, upd.Message.MessageID)
 				b.bot.Send(del)
