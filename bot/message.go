@@ -28,11 +28,13 @@ func (b *Bot) GenerateReportRGL(scaut Scaut) string {
 	if scaut.UserName != "" {
 		kpd := efficiencyPercent(float64(scaut.TimeStart.Sub(scaut.FirstTime).Hours()), float64(scaut.Moved))
 		result.WriteString(fmt.Sprintf(
-			"Смену завершил %s.c %s-%s (%s Часов)\n"+
+			"👤 *@%s*\n"+
+				"Смену завершил %s.c %s-%s (%s Часов)\n"+
 				"🔁 Перемещения: %d\n"+
 				"✅ Навёл порядок: %d\n"+
 				"⏱ Отчёты более 30 минут: %d\n"+
 				"🚀 Эффективность: %.1f%%\n\n",
+			scaut.UserName,
 			getDate(), b.getTimeReport(scaut.FirstTime),
 			b.getTimeReport(scaut.TimeStart), scaut.TimeStart.Sub(scaut.FirstTime).String(),
 			scaut.Moved, scaut.Images, scaut.Lateness, kpd,

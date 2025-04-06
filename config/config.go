@@ -32,9 +32,9 @@ func InitConfig() *Config {
 		Token:        os.Getenv("bot_token"),
 		AdminChannel: int64(getEnvInt("admin_channel_id", 0)),
 		Admins:       AdminsMap,
-		TimeOfset:    time.Duration(getEnvInt("", 35)) * time.Minute,
-		TimeReset:    time.Duration(getEnvInt("", 90)) * time.Minute,
-		TimeLocation: time.Duration(getEnvInt("", 0)),
+		TimeOfset:    time.Duration(getEnvInt("time_reset", 35)) * time.Minute,
+		TimeReset:    time.Duration(getEnvInt("time_ofset", 90)) * time.Minute,
+		TimeLocation: time.Duration(getEnvInt("time_location", 0)),
 	}
 }
 
