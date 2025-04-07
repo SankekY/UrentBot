@@ -12,7 +12,7 @@ func main() {
 	Init()
 	cofig := config.InitConfig()
 	mybot := bot.NewBot(*cofig)
-	log.Printf("Config Loaded!\n")
+	log.Printf("Config Loaded!\n: Admin: %d, Scaut: %d Admins: %v", cofig.AdminChannel, cofig.ScautChannel, cofig.Admins)
 	mybot.Start()
 
 }
