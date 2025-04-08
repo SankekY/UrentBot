@@ -69,7 +69,7 @@ func (b *Bot) Start() {
 		}
 		if upd.Message.Chat.ID == b.cfg.ScautChannel {
 			b.MessageHandler(*upd.Message)
-			if upd.Message.Photo == nil {
+			if upd.Message.Text != "" {
 				b.DoublersHandler(*upd.Message)
 			}
 		}
@@ -133,7 +133,9 @@ func (b *Bot) addToDoublers(text string) {
 	if numbers != nil {
 		b.DublersTracker.counter++
 		for _, n := range numbers {
-			b.DublersTracker.data[n]++
+			if n != "" {
+				b.DublersTracker.data[n]++
+			}
 		}
 	}
 }
