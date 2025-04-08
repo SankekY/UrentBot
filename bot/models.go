@@ -20,3 +20,8 @@ type Scaut struct {
 	FirstTime time.Time
 	ChatID    int64
 }
+
+type DublersTracker struct {
+	data    map[string]int
+	counter int
+}

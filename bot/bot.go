@@ -18,6 +18,7 @@ type Bot struct {
 	bot *tgbotapi.BotAPI
 	*Mut
 	wg *sync.WaitGroup
+	DublersTracker
 }
 
 type Mut struct {
@@ -45,14 +46,11 @@ var (
 	StatScauts        = make(map[int64]WendayScaut)
 	Scauts            = make(map[int64]Scaut)
 	Subs              = make(map[string]int64)
-	Dublers           = make(map[string]int)
-	reportDubler      int
 	IdealUnitsPerHour = float64(15.5)
 )
 
 func (b *Bot) Start() {
 	log.Printf("Bot started: %s!", b.bot.Self.FirstName)
-
 	go b.ResetReportRGL(b.cfg.TimeReset)
 	updates := b.bot.GetUpdatesChan(tgbotapi.NewUpdate(0))
 	for upd := range updates {
@@ -69,11 +67,13 @@ func (b *Bot) Start() {
 			b.CMDHanlder(*upd.Message)
 			continue
 		}
-
-		b.MessageHandler(*upd.Message)
-		if upd.Message.Text != "" && upd.Message.Photo == nil {
-			b.DublersHandler(*upd.Message)
+		if upd.Message.Chat.ID == b.cfg.ScautChannel {
+			b.MessageHandler(*upd.Message)
+			if upd.Message.Photo == nil {
+				b.DoublersHandler(*upd.Message)
+			}
 		}
+
 	}
 }
 
@@ -104,46 +104,48 @@ func (b *Bot) ResetReportRGL(timeReset time.Duration) {
 	}
 }
 
-func (b *Bot) DublersHandler(msg tgbotapi.Message) {
-	reportDubler++
-	AddToDublers(msg.Text)
-	if reportDubler >= 3 {
-		if ResultDubler := findDublicates(Dublers); ResultDubler != nil {
+func (b *Bot) DoublersHandler(msg tgbotapi.Message) {
+
+	b.addToDoublers(msg.Text)
+	if b.DublersTracker.counter >= 4 {
+		if duplicates := b.findDuplicates(); len(duplicates) > 0 {
 			message := tgbotapi.NewMessage(b.cfg.AdminChannel, "")
-			for key, value := range ResultDubler {
-				message.Text += fmt.Sprintf(" - %s: %d Раз(а)\n", key, value-1)
+			for key, value := range duplicates {
+				if value > 0 {
+					message.Text += fmt.Sprintf("- <code>%s</code> : (%d)Раз \n", key, value)
+				}
 			}
 			if message.Text != "" {
-				message.Text = "⛔ Дубликаты найдены ⛔\n" + message.Text
-				message.Text += "@" + msg.From.UserName
+				message.ParseMode = "html"
+				message.Text = "⛔ Дубликаты найдены ⛔\n" + message.Text + fmt.Sprintf("@%s", msg.From.UserName)
 				b.bot.Send(message)
 			}
 		}
-		reportDubler = 0
-		Dublers = make(map[string]int)
-		AddToDublers(msg.Text)
-
+		b.DublersTracker.counter = 0
+		b.DublersTracker.data = make(map[string]int)
+		b.addToDoublers(msg.Text)
 	}
-
 }
-func AddToDublers(msg string) {
-	re, _ := regexp.Compile(`S\.\d{6}`)
-	numbers := re.FindAllString(msg, -1)
-	if numbers != nil && reportDubler < 3 {
+
+func (b *Bot) addToDoublers(text string) {
+	re := regexp.MustCompile(`S.\d{6}`) // Пример: S.123456
+	numbers := re.FindAllString(text, -1)
+	if numbers != nil {
+		b.DublersTracker.counter++
 		for _, n := range numbers {
-			Dublers[n] += 1
+			b.DublersTracker.data[n]++
 		}
 	}
 }
 
-func findDublicates(dublers map[string]int) map[string]int {
-	dubler := make(map[string]int)
-	for key, value := range dublers {
+func (b *Bot) findDuplicates() map[string]int {
+	duplicates := make(map[string]int)
+	for key, value := range b.DublersTracker.data {
 		if value > 1 {
-			dubler[key] += value
+			duplicates[key] = value - 1 // Количество повторений
 		}
 	}
-	return dubler
+	return duplicates
 }
 
 func (b *Bot) MessageHandler(msg tgbotapi.Message) {

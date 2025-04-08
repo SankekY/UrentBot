@@ -4,6 +4,27 @@ import (
 	tgbotapi "github.com/go-telegram-bot-api/telegram-bot-api/v5"
 )
 
+var RGLKeyboard = tgbotapi.NewReplyKeyboard(
+	tgbotapi.NewKeyboardButtonRow(
+		tgbotapi.NewKeyboardButton("/rgl"),
+		tgbotapi.NewKeyboardButton("/stats"),
+	),
+	tgbotapi.NewKeyboardButtonRow(
+		tgbotapi.NewKeyboardButton("/start"),
+		tgbotapi.NewKeyboardButton("/restats"),
+	),
+)
+
+var ScautKeyboard = tgbotapi.NewReplyKeyboard(
+	tgbotapi.NewKeyboardButtonRow(
+		tgbotapi.NewKeyboardButton("/info"),
+		tgbotapi.NewKeyboardButton("/report"),
+	),
+	tgbotapi.NewKeyboardButtonRow(
+		tgbotapi.NewKeyboardButton("/start"),
+	),
+)
+
 var AwaitMessage = map[string]string{
 	"start_admin": `
 		🔻 ___ RGL Mode ___ 🔻
@@ -77,10 +98,14 @@ func (b *Bot) CMDStart(msg tgbotapi.Message) {
 	defer b.wg.Done()
 
 	if !b.cfg.Admins[msg.From.ID] {
-		b.bot.Send(tgbotapi.NewMessage(msg.Chat.ID, AwaitMessage["start_scaut"]))
+		message := tgbotapi.NewMessage(msg.Chat.ID, AwaitMessage["start_scaut"])
+		message.ReplyMarkup = ScautKeyboard
+		b.bot.Send(message)
 		return
 	}
-	b.bot.Send(tgbotapi.NewMessage(msg.Chat.ID, AwaitMessage["start_admin"]))
+	message := tgbotapi.NewMessage(msg.Chat.ID, AwaitMessage["start_admin"])
+	message.ReplyMarkup = RGLKeyboard
+	b.bot.Send(message)
 }
 
 func (b *Bot) CMDSubs(msg tgbotapi.Message) {
@@ -130,7 +155,8 @@ func (b *Bot) CMDReport(msg tgbotapi.Message) {
 
 	// SCAUT Message
 	message := tgbotapi.NewMessage(msg.Chat.ID, "")
-	message.Text = b.GenerateReportScaut(scaut)
+	message.ParseMode = "html"
+	message.Text = "<code>" + b.GenerateReportScaut(scaut) + "</code>"
 	b.bot.Send(message)
 
 	b.AddStat(scaut, msg.From.ID)

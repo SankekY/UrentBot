@@ -15,6 +15,7 @@ type Config struct {
 	TimeOfset    time.Duration
 	TimeReset    time.Duration
 	TimeLocation time.Duration
+	ScautChannel int64
 }
 
 func InitConfig() *Config {
@@ -35,6 +36,7 @@ func InitConfig() *Config {
 		TimeOfset:    time.Duration(getEnvInt("time_reset", 35)) * time.Minute,
 		TimeReset:    time.Duration(getEnvInt("time_ofset", 90)) * time.Minute,
 		TimeLocation: time.Duration(getEnvInt("time_location", 0)),
+		ScautChannel: int64(getEnvInt("scaut_channel_id", 0)),
 	}
 }
 
