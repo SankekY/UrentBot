@@ -18,7 +18,7 @@ type Bot struct {
 	bot *tgbotapi.BotAPI
 	*Mut
 	wg      *sync.WaitGroup
-	Dublers Dublers
+	Dublers DublersTracker
 }
 
 type Mut struct {
@@ -38,8 +38,11 @@ func NewBot(cfg config.Config) *Bot {
 			muScauts: sync.RWMutex{},
 			muStats:  sync.RWMutex{},
 		},
-		Dublers: DublersTracker{},
-		wg:      &sync.WaitGroup{},
+		Dublers: DublersTracker{
+			data:    map[string]int{},
+			counter: 0,
+		},
+		wg: &sync.WaitGroup{},
 	}
 }
 
@@ -74,7 +77,6 @@ func (b *Bot) Start() {
 				b.DoublersHandler(*upd.Message)
 			}
 		}
-
 	}
 }
 
