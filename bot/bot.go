@@ -17,8 +17,8 @@ type Bot struct {
 	cfg *config.Config
 	bot *tgbotapi.BotAPI
 	*Mut
-	wg *sync.WaitGroup
-	DublersTracker
+	wg      *sync.WaitGroup
+	Dublers Dublers
 }
 
 type Mut struct {
@@ -38,7 +38,8 @@ func NewBot(cfg config.Config) *Bot {
 			muScauts: sync.RWMutex{},
 			muStats:  sync.RWMutex{},
 		},
-		wg: &sync.WaitGroup{},
+		Dublers: DublersTracker{},
+		wg:      &sync.WaitGroup{},
 	}
 }
 
@@ -107,7 +108,7 @@ func (b *Bot) ResetReportRGL(timeReset time.Duration) {
 func (b *Bot) DoublersHandler(msg tgbotapi.Message) {
 
 	b.addToDoublers(msg.Text)
-	if b.DublersTracker.counter >= 4 {
+	if b.Dublers.counter >= 4 {
 		if duplicates := b.findDuplicates(); len(duplicates) > 0 {
 			message := tgbotapi.NewMessage(b.cfg.AdminChannel, "")
 			for key, value := range duplicates {
@@ -121,8 +122,8 @@ func (b *Bot) DoublersHandler(msg tgbotapi.Message) {
 				b.bot.Send(message)
 			}
 		}
-		b.DublersTracker.counter = 0
-		b.DublersTracker.data = make(map[string]int)
+		b.Dublers.counter = 0
+		b.Dublers.data = make(map[string]int)
 		b.addToDoublers(msg.Text)
 	}
 }
@@ -131,10 +132,10 @@ func (b *Bot) addToDoublers(text string) {
 	re := regexp.MustCompile(`S.\d{6}`) // Пример: S.123456
 	numbers := re.FindAllString(text, -1)
 	if numbers != nil {
-		b.DublersTracker.counter++
+		b.Dublers.counter++
 		for _, n := range numbers {
 			if n != "" {
-				b.DublersTracker.data[n]++
+				b.Dublers.data[n]++
 			}
 		}
 	}
@@ -142,7 +143,7 @@ func (b *Bot) addToDoublers(text string) {
 
 func (b *Bot) findDuplicates() map[string]int {
 	duplicates := make(map[string]int)
-	for key, value := range b.DublersTracker.data {
+	for key, value := range b.Dublers.data {
 		if value > 1 {
 			duplicates[key] = value - 1 // Количество повторений
 		}
