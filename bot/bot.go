@@ -86,7 +86,7 @@ func (b *Bot) ResetReportRGL(timeReset time.Duration) {
 		b.muScauts.Lock()
 		for key, scaut := range Scauts {
 			if !scaut.TimeStart.IsZero() {
-				if time.Until(scaut.TimeStart.Add(b.cfg.TimeReset)) < 0 {
+				if time.Until(scaut.TimeStart) > b.cfg.TimeReset {
 					MsgForAdmin := tgbotapi.NewMessage(b.cfg.AdminChannel, "")
 					MsgForAdmin.Text = b.GenerateReportRGL(scaut)
 
