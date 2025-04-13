@@ -9,6 +9,7 @@ import (
 func (b *Bot) GenerateReportScaut(scaut Scaut) string {
 	var result strings.Builder
 	if scaut.UserName != "" {
+		scaut.TimeStart = scaut.TimeStart.Add(15 * time.Minute)
 		sumHour := strings.Split(scaut.TimeStart.Sub(scaut.FirstTime).String(), "h")
 		result.WriteString(fmt.Sprintf(
 			"Смену завершил %s.c %s-%s (%s Часов)\n"+
